@@ -1,8 +1,8 @@
 const CONFIG = {
 	// Extra vertical stretch at full speed (0.035 = 3.5%). Higher = more smear.
-	maxStretch: 0.035,
+	maxStretch: 0.12,
 	// Opacity at full speed. 1 = no fade, lower = ghostier.
-	minOpacity: 0.78,
+	minOpacity: 0.5,
 	// How long the smear fades out after you stop scrolling (ms).
 	fadeOutMs: 500,
 	// Scroll speed (px per ms) that counts as "full blur".
