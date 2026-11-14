@@ -1,23 +1,30 @@
 const CONFIG = {
-	// Extra vertical stretch at full speed (0.035 = 3.5%). Higher = more smear.
 	maxStretch: 0.12,
-	// Opacity at full speed. 1 = no fade, lower = ghostier.
 	minOpacity: 0.5,
-	// How long the smear fades out after you stop scrolling (ms).
 	fadeOutMs: 500,
-	// Scroll speed (px per ms) that counts as "full blur".
 	fullSpeed: 2.5,
-	// How fast the smear ramps up (ms).
 	attackMs: 70,
-	// How long without scroll events before we call it "stopped" (ms).
 	idleMs: 60,
+	debug: true,
+	applyToAll: true,
 }
 
 export default plugin({
 	start({ cleanup, unscoped }) {
 		const { react } = unscoped
 		const { ReactNative, React, jsxRuntime } = react
-		const { Animated, Easing, StyleSheet } = ReactNative
+		const { Animated, Easing, StyleSheet, Alert } = ReactNative
+
+		const say = (title: string, msg: string) => {
+			if (!CONFIG.debug) return
+			setTimeout(() => {
+				try {
+					Alert.alert(title, msg)
+				} catch {}
+			}, 0)
+		}
+		say('Scroll Blur', 'plugin started')
+		let seen = 0
 
 		const intensity = new Animated.Value(0)
 		let current = 0
@@ -65,7 +72,6 @@ export default plugin({
 			idleTimer = setTimeout(fadeOut, CONFIG.idleMs) as unknown as ReturnType<typeof setTimeout>
 		}
 
-		// The chat is an inverted list, which React Native draws with scaleY: -1.
 		const isInverted = (style: unknown) => {
 			const flat = StyleSheet.flatten(style as any) as any
 			const transform = flat?.transform
@@ -93,11 +99,20 @@ export default plugin({
 
 		const unpatch = jsxRuntime.insteadJSX('RCTScrollView', ([type, props, key], jsx) => {
 			const p = props as any
-			if (p.horizontal || !isInverted(p.style)) return jsx(type, props, key)
+			const inverted = isInverted(p.style)
+
+			if (seen === 0) {
+				seen = 1
+				const tf = (StyleSheet.flatten(p.style as any) as any)?.transform
+				say('Scroll Blur: saw a list', `inverted=${inverted} horizontal=${!!p.horizontal} transform=${JSON.stringify(tf)}`)
+			}
+
+			if (p.horizontal || !(inverted || CONFIG.applyToAll)) return jsx(type, props, key)
 
 			if (!loggedMatch) {
 				loggedMatch = true
-				console.log('[scroll-blur] hooked an inverted scroll view (chat list)')
+				console.log('[scroll-blur] hooked a scroll view')
+				say('Scroll Blur: hooked', `inverted=${inverted}. Now scroll fast.`)
 			}
 
 			const original = p.onScroll
