@@ -6,6 +6,8 @@ const CONFIG = {
 	attackMs: 70,
 	idleMs: 60,
 	debug: true,
+	popups: false,
+	alwaysFull: true,
 	applyToAll: true,
 }
 
@@ -16,7 +18,7 @@ export default plugin({
 		const { Animated, Easing, StyleSheet, Alert } = ReactNative
 
 		const say = (title: string, msg: string) => {
-			if (!CONFIG.debug) return
+			if (!CONFIG.popups) return
 			setTimeout(() => {
 				try {
 					Alert.alert(title, msg)
@@ -31,8 +33,6 @@ export default plugin({
 		let lastY: number | null = null
 		let lastT = 0
 		let idleTimer: ReturnType<typeof setTimeout> | undefined
-		let testDone = false
-		let holdUntil = 0
 
 		const fadeOut = () => {
 			current = 0
@@ -51,14 +51,13 @@ export default plugin({
 			if (typeof y !== 'number') return
 
 			const now = Date.now()
-			if (CONFIG.debug && !testDone) {
-				testDone = true
-				holdUntil = now + 1500
+			if (CONFIG.alwaysFull) {
+				intensity.stopAnimation()
 				intensity.setValue(1)
-				setTimeout(fadeOut, 1500)
-				say('Scroll Blur test', 'Full-strength effect for 1.5s. Did the chat stretch/fade?')
+				if (idleTimer) clearTimeout(idleTimer)
+				idleTimer = setTimeout(fadeOut, 150) as unknown as ReturnType<typeof setTimeout>
+				return
 			}
-			if (now < holdUntil) return
 			if (lastY !== null && now > lastT) {
 				const speed = Math.abs(y - lastY) / (now - lastT)
 				const target = Math.min(1, speed / CONFIG.fullSpeed)
