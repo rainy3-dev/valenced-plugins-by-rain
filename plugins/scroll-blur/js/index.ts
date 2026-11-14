@@ -1,83 +1,97 @@
 const CONFIG = {
-	maxStretch: 0.12,
-	minOpacity: 0.5,
+	maxBlur: 8,
+	maxStretch: 0.01,
 	fadeOutMs: 500,
 	fullSpeed: 2.5,
-	attackMs: 70,
-	idleMs: 60,
-	debug: true,
-	popups: false,
-	alwaysFull: true,
+	idleMs: 80,
 	applyToAll: true,
+	discover: true,
 }
 
 export default plugin({
 	start({ cleanup, unscoped }) {
-		const { react } = unscoped
-		const { ReactNative, React, jsxRuntime } = react
-		const { Animated, Easing, StyleSheet, Alert } = ReactNative
+		const { react, patcher } = unscoped
+		const { ReactNative, React, jsxRuntime, ReactJSXRuntime } = react
+		const { StyleSheet, View, Alert } = ReactNative
 
-		const say = (title: string, msg: string) => {
-			if (!CONFIG.popups) return
-			setTimeout(() => {
-				try {
-					Alert.alert(title, msg)
-				} catch {}
-			}, 0)
-		}
-		let popups = 0
-		const reported = new Set<string>()
-
-		const intensity = new Animated.Value(0)
-		let current = 0
+		const listeners = new Set<(level: number) => void>()
+		let shown = 0
+		let level = 0
 		let lastY: number | null = null
 		let lastT = 0
 		let idleTimer: ReturnType<typeof setTimeout> | undefined
+		let fadeTimer: ReturnType<typeof setInterval> | undefined
 
-		const fadeOut = () => {
-			current = 0
+		const show = (v: number) => {
+			const q = Math.round(v)
+			if (q === shown) return
+			shown = q
+			listeners.forEach((l) => l(q))
+		}
+
+		const stopFade = () => {
+			if (fadeTimer) {
+				clearInterval(fadeTimer)
+				fadeTimer = undefined
+			}
+		}
+
+		const startFade = () => {
+			stopFade()
 			lastY = null
-			intensity.stopAnimation()
-			Animated.timing(intensity, {
-				toValue: 0,
-				duration: CONFIG.fadeOutMs,
-				easing: Easing.out(Easing.cubic),
-				useNativeDriver: false,
-			}).start()
+			const from = level
+			const t0 = Date.now()
+			fadeTimer = setInterval(() => {
+				const t = (Date.now() - t0) / CONFIG.fadeOutMs
+				if (t >= 1) {
+					level = 0
+					show(0)
+					stopFade()
+					return
+				}
+				level = from * (1 - t) * (1 - t)
+				show(level)
+			}, 40)
 		}
 
 		const handleScroll = (e: any) => {
 			const y = e?.nativeEvent?.contentOffset?.y
 			if (typeof y !== 'number') return
-
 			const now = Date.now()
-			if (CONFIG.alwaysFull) {
-				intensity.stopAnimation()
-				intensity.setValue(1)
-				if (idleTimer) clearTimeout(idleTimer)
-				idleTimer = setTimeout(fadeOut, 150) as unknown as ReturnType<typeof setTimeout>
-				return
-			}
 			if (lastY !== null && now > lastT) {
 				const speed = Math.abs(y - lastY) / (now - lastT)
-				const target = Math.min(1, speed / CONFIG.fullSpeed)
-				const next = Math.max(target, current * 0.85)
-				if (Math.abs(next - current) > 0.03) {
-					current = next
-					intensity.stopAnimation()
-					Animated.timing(intensity, {
-						toValue: next,
-						duration: CONFIG.attackMs,
-						easing: Easing.out(Easing.quad),
-						useNativeDriver: false,
-					}).start()
-				}
+				const target = Math.min(1, speed / CONFIG.fullSpeed) * CONFIG.maxBlur
+				stopFade()
+				level = Math.max(target, level * 0.85)
+				show(level)
 			}
 			lastY = y
 			lastT = now
-
 			if (idleTimer) clearTimeout(idleTimer)
-			idleTimer = setTimeout(fadeOut, CONFIG.idleMs) as unknown as ReturnType<typeof setTimeout>
+			idleTimer = setTimeout(startFade, CONFIG.idleMs) as unknown as ReturnType<typeof setTimeout>
+		}
+
+		const Wrapper = (props: { children?: unknown }) => {
+			const [blur, setBlur] = React.useState(shown)
+			React.useEffect(() => {
+				listeners.add(setBlur)
+				return () => {
+					listeners.delete(setBlur)
+				}
+			}, [])
+			const style: any = { flex: 1 }
+			if (blur > 0) {
+				style.filter = [{ blur }]
+				if (CONFIG.maxStretch > 0) {
+					style.transform = [{ scaleY: 1 + CONFIG.maxStretch * (blur / CONFIG.maxBlur) }]
+				}
+			}
+			return React.createElement(View, { style, collapsable: false }, props.children as any)
+		}
+
+		const wrapOnScroll = (original: unknown) => (e: any) => {
+			handleScroll(e)
+			return typeof original === 'function' ? original(e) : undefined
 		}
 
 		const isInverted = (style: unknown) => {
@@ -86,58 +100,49 @@ export default plugin({
 			return Array.isArray(transform) && transform.some((t: any) => t && t.scaleY === -1)
 		}
 
-		const wrapperStyle = {
-			flex: 1,
-			borderWidth: CONFIG.debug ? 3 : 0,
-			borderColor: 'red',
-			opacity: intensity.interpolate({
-				inputRange: [0, 1],
-				outputRange: [1, CONFIG.minOpacity],
-			}),
-			transform: [
-				{
-					scaleY: intensity.interpolate({
-						inputRange: [0, 1],
-						outputRange: [1, 1 + CONFIG.maxStretch],
-					}),
-				},
-			],
-		}
-
-		const Wrapper = (props: { children?: unknown }) =>
-			React.createElement(Animated.View, { style: wrapperStyle, collapsable: false }, props.children as any)
-
-		const unpatch = jsxRuntime.insteadJSX('RCTScrollView', ([type, props, key], jsx) => {
+		const unpatchLists = jsxRuntime.insteadJSX('RCTScrollView', ([type, props, key], jsx) => {
 			const p = props as any
-			const inverted = isInverted(p.style)
-
-			const tf = (StyleSheet.flatten(p.style as any) as any)?.transform
-			const desc = `props: ${Object.keys(p).filter((k) => k !== 'children').slice(0, 16).join(',')} | onScroll=${typeof p.onScroll} | inverted=${String(p.inverted)} | transform=${JSON.stringify(tf)}`
-
-			if (p.horizontal || !(inverted || CONFIG.applyToAll)) return jsx(type, props, key)
-
-			const original = p.onScroll
-			const patched = {
-				...p,
-				onScroll: (e: any) => {
-					handleScroll(e)
-					if (popups < 3 && !reported.has(desc)) {
-						reported.add(desc)
-						popups++
-						say(`Scroll event #${popups}`, `y=${Math.round(e?.nativeEvent?.contentOffset?.y ?? -1)}\n${desc}`)
-					}
-					return typeof original === 'function' ? original(e) : undefined
-				},
-			}
-
+			if (!CONFIG.applyToAll || p.horizontal || isInverted(p.style)) return jsx(type, props, key)
+			const patched = { ...p, onScroll: wrapOnScroll(p.onScroll) }
 			return React.createElement(Wrapper, null, jsx(type, patched, key)) as any
 		})
 
-		cleanup(unpatch)
+		const seen = new Set<string>()
+		const chatHook = function (this: any, args: any[], original: (...a: any[]) => unknown) {
+			const [type, props, key] = args
+			if (props && props.inverted === true && typeof type !== 'string' && typeof props.renderItem === 'function') {
+				if (CONFIG.discover) {
+					const name = String(type?.displayName || type?.name || type?.render?.name || 'anonymous')
+					if (!seen.has(name) && seen.size < 2) {
+						seen.add(name)
+						setTimeout(() => {
+							try {
+								Alert.alert(
+									'Scroll Blur: chat list found',
+									`${name}\nonScroll=${typeof props.onScroll}\nkeys: ${Object.keys(props).slice(0, 18).join(',')}`,
+								)
+							} catch {}
+						}, 0)
+					}
+				}
+				const patched =
+					props.onScroll === undefined || typeof props.onScroll === 'function'
+						? { ...props, onScroll: wrapOnScroll(props.onScroll) }
+						: props
+				return React.createElement(Wrapper, null, original(type, patched, key) as any)
+			}
+			return original(...args)
+		}
+		const unJsx = patcher.instead(ReactJSXRuntime as any, 'jsx', chatHook as any)
+		const unJsxs = patcher.instead(ReactJSXRuntime as any, 'jsxs', chatHook as any)
+
+		cleanup(unpatchLists)
+		cleanup(unJsx)
+		cleanup(unJsxs)
 		cleanup(() => {
 			if (idleTimer) clearTimeout(idleTimer)
-			intensity.stopAnimation()
-			intensity.setValue(0)
+			stopFade()
+			show(0)
 		})
 	},
 })
