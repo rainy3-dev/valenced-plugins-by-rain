@@ -112,7 +112,7 @@
       "description": "A short motion-blur smear on the chat when you scroll, easing out over about half a second.",
       "author": "Rain",
       "channels": {
-        "latest": "1.0.5"
+        "latest": "1.0.6"
       },
       "versions": {
         "1.0.0": {
@@ -184,6 +184,19 @@
           "url": "https://rainy3-dev.github.io/valenced-plugins-by-rain/pool/dev.rain.scroll-blur@1.0.5.zip",
           "sha256": "595e51ec74b097bf36d5ca56ffe2eec27f4781a48b79d61277ab9ceae767dc41",
           "size": 1579,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {
+              "version": "*"
+            }
+          }
+        },
+        "1.0.6": {
+          "url": "https://rainy3-dev.github.io/valenced-plugins-by-rain/pool/dev.rain.scroll-blur@1.0.6.zip",
+          "sha256": "a92035211bda285c09b37de4aa5b5952bd00af3f98b421c03bbdb3b078ab7e56",
+          "size": 1632,
           "dependencies": {
             "valenced.api": {
               "version": ">=1 <2"
