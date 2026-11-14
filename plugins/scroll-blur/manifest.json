@@ -4,7 +4,7 @@
 	"name": "Scroll Blur",
 	"description": "A short motion-blur smear on the chat when you scroll, easing out over about half a second.",
 	"author": "Rain",
-	"version": "1.0.5",
+	"version": "1.0.6",
 	"dependencies": {
 		"valenced.api": { "version": ">=1 <2" },
 		"discord": { "version": "*" }
