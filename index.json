@@ -107,6 +107,32 @@
         }
       }
     },
+    "dev.rain.reply-color": {
+      "name": "Reply Colour",
+      "description": "Recolour the highlight on messages that reply to or mention you. Pick a colour in the theme picker; everything else stays stock Discord.",
+      "author": "Rain",
+      "channels": {
+        "latest": "1.0.0"
+      },
+      "versions": {
+        "1.0.0": {
+          "url": "https://rainy3-dev.github.io/valenced-plugins-by-rain/pool/dev.rain.reply-color@1.0.0.zip",
+          "sha256": "be7c38c2e3667cfeef97c963ba35b5baf04246ad0589d9e4c126fccbd813301c",
+          "size": 377,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {
+              "version": "*"
+            },
+            "valenced.api.themes": {
+              "version": "*"
+            }
+          }
+        }
+      }
+    },
     "dev.rain.scroll-blur": {
       "name": "Scroll Blur",
       "description": "A short motion-blur smear on the chat when you scroll, easing out over about half a second.",
