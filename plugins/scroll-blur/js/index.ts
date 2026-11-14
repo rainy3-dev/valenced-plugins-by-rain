@@ -31,6 +31,8 @@ export default plugin({
 		let lastY: number | null = null
 		let lastT = 0
 		let idleTimer: ReturnType<typeof setTimeout> | undefined
+		let testDone = false
+		let holdUntil = 0
 
 		const fadeOut = () => {
 			current = 0
@@ -40,7 +42,7 @@ export default plugin({
 				toValue: 0,
 				duration: CONFIG.fadeOutMs,
 				easing: Easing.out(Easing.cubic),
-				useNativeDriver: true,
+				useNativeDriver: false,
 			}).start()
 		}
 
@@ -49,6 +51,14 @@ export default plugin({
 			if (typeof y !== 'number') return
 
 			const now = Date.now()
+			if (CONFIG.debug && !testDone) {
+				testDone = true
+				holdUntil = now + 1500
+				intensity.setValue(1)
+				setTimeout(fadeOut, 1500)
+				say('Scroll Blur test', 'Full-strength effect for 1.5s. Did the chat stretch/fade?')
+			}
+			if (now < holdUntil) return
 			if (lastY !== null && now > lastT) {
 				const speed = Math.abs(y - lastY) / (now - lastT)
 				const target = Math.min(1, speed / CONFIG.fullSpeed)
@@ -60,7 +70,7 @@ export default plugin({
 						toValue: next,
 						duration: CONFIG.attackMs,
 						easing: Easing.out(Easing.quad),
-						useNativeDriver: true,
+						useNativeDriver: false,
 					}).start()
 				}
 			}
@@ -79,6 +89,8 @@ export default plugin({
 
 		const wrapperStyle = {
 			flex: 1,
+			borderWidth: CONFIG.debug ? 3 : 0,
+			borderColor: 'red',
 			opacity: intensity.interpolate({
 				inputRange: [0, 1],
 				outputRange: [1, CONFIG.minOpacity],
