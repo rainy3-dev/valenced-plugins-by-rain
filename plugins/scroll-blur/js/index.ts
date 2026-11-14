@@ -23,15 +23,14 @@ export default plugin({
 				} catch {}
 			}, 0)
 		}
-		say('Scroll Blur', 'plugin started')
-		let seen = 0
+		let popups = 0
+		const reported = new Set<string>()
 
 		const intensity = new Animated.Value(0)
 		let current = 0
 		let lastY: number | null = null
 		let lastT = 0
 		let idleTimer: ReturnType<typeof setTimeout> | undefined
-		let loggedMatch = false
 
 		const fadeOut = () => {
 			current = 0
@@ -101,26 +100,22 @@ export default plugin({
 			const p = props as any
 			const inverted = isInverted(p.style)
 
-			if (seen === 0) {
-				seen = 1
-				const tf = (StyleSheet.flatten(p.style as any) as any)?.transform
-				say('Scroll Blur: saw a list', `inverted=${inverted} horizontal=${!!p.horizontal} transform=${JSON.stringify(tf)}`)
-			}
+			const tf = (StyleSheet.flatten(p.style as any) as any)?.transform
+			const desc = `props: ${Object.keys(p).filter((k) => k !== 'children').slice(0, 16).join(',')} | onScroll=${typeof p.onScroll} | inverted=${String(p.inverted)} | transform=${JSON.stringify(tf)}`
 
 			if (p.horizontal || !(inverted || CONFIG.applyToAll)) return jsx(type, props, key)
-
-			if (!loggedMatch) {
-				loggedMatch = true
-				console.log('[scroll-blur] hooked a scroll view')
-				say('Scroll Blur: hooked', `inverted=${inverted}. Now scroll fast.`)
-			}
 
 			const original = p.onScroll
 			const patched = {
 				...p,
-				onScroll: (e: unknown) => {
+				onScroll: (e: any) => {
 					handleScroll(e)
-					return original?.(e)
+					if (popups < 3 && !reported.has(desc)) {
+						reported.add(desc)
+						popups++
+						say(`Scroll event #${popups}`, `y=${Math.round(e?.nativeEvent?.contentOffset?.y ?? -1)}\n${desc}`)
+					}
+					return typeof original === 'function' ? original(e) : undefined
 				},
 			}
 
