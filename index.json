@@ -112,7 +112,7 @@
       "description": "Recolour the highlight on messages that reply to or mention you. Pick a colour in the theme picker; everything else stays stock Discord.",
       "author": "Rain",
       "channels": {
-        "latest": "1.0.1"
+        "latest": "1.0.2"
       },
       "versions": {
         "1.0.0": {
@@ -135,6 +135,22 @@
           "url": "https://rainy3-dev.github.io/valenced-plugins-by-rain/pool/dev.rain.reply-color@1.0.1.zip",
           "sha256": "36f6946c3de96a12219e398a5d58e440a2ec8f6e78ac3a119783bac1279734c0",
           "size": 2291,
+          "dependencies": {
+            "valenced.api": {
+              "version": ">=1 <2"
+            },
+            "discord": {
+              "version": "*"
+            },
+            "valenced.api.themes": {
+              "version": "*"
+            }
+          }
+        },
+        "1.0.2": {
+          "url": "https://rainy3-dev.github.io/valenced-plugins-by-rain/pool/dev.rain.reply-color@1.0.2.zip",
+          "sha256": "f1dd17f262796ef19f66b2e5fd90dab6dc489260a09e97c5feccc3d50ba88553",
+          "size": 2707,
           "dependencies": {
             "valenced.api": {
               "version": ">=1 <2"
