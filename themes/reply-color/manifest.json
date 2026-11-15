@@ -4,7 +4,7 @@
 	"name": "Reply Colour",
 	"description": "Recolour the highlight on messages that reply to or mention you. Pick a colour in the theme picker; everything else stays stock Discord.",
 	"author": "Rain",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"dependencies": {
 		"valenced.api": { "version": ">=1 <2" },
 		"discord": { "version": "*" },
