@@ -1,0 +1,13 @@
+{
+	"format": 1,
+	"id": "dev.rain.reply-highlight",
+	"name": "Reply Highlight",
+	"description": "Pick any colour for the highlight on messages that reply to or mention you. Applies live and works with any theme.",
+	"author": "Rain",
+	"version": "1.0.0",
+	"dependencies": {
+		"valenced.api": { "version": ">=1 <2" },
+		"discord": { "version": "*" }
+	},
+	"dist": { "script": "index.js" }
+}
